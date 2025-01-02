@@ -1,0 +1,20 @@
+# 使用輕量級的 Debian Slim 作為基礎映像
+FROM debian:bullseye-slim
+
+# 設定工作目錄
+WORKDIR /app
+
+# 複製已編譯好的 Spring Boot 二進制檔案到容器內
+COPY target/userdata-project-springboot-camel /app/app
+
+# 複製監控腳本到容器內
+COPY monitor-and-restart-native.sh /app/monitor-and-restart-native.sh
+
+# 確保二進制檔案和腳本有執行權限
+RUN chmod +x /app/app /app/monitor-and-restart-native.sh
+
+# 安裝必要工具：inotify-tools、curl 和 docker.io
+RUN apt-get update && apt-get install -y inotify-tools curl docker.io && apt-get clean
+
+# 啟動容器後執行監控腳本
+CMD ["/app/monitor-and-restart-native.sh"]

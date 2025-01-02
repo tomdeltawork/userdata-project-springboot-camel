@@ -1,0 +1,22 @@
+# 使用基礎映像
+FROM openjdk:17-jdk-slim
+
+# 設定環境變數，用於指定 JAR 文件名稱
+ARG JAR_FILE=app.jar
+ENV JAR_FILE=${JAR_FILE}
+
+# 安裝 inotify-tools，用於檔案變更檢測
+RUN apt-get update && apt-get install -y inotify-tools curl docker.io jq && apt-get clean 
+
+# 設定工作目錄
+WORKDIR /app
+
+# 複製指定的 JAR 文件到容器中
+COPY ${JAR_FILE} /app/app.jar
+
+# 複製監控腳本
+COPY monitor-and-restart.sh /app/monitor-and-restart.sh
+RUN chmod +x /app/monitor-and-restart.sh
+
+# 啟動監控腳本，並使用動態的 JAR 文件名稱
+CMD ["/app/monitor-and-restart.sh"]
