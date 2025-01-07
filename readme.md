@@ -2,14 +2,18 @@
 ### Step1. 安裝 `jdk 17`
 ```
 // 下載 GraalVM：根據作業系統下載適當的版本（建議下載 GraalVM JDK 17，與 Spring Boot 3.x 相容）。
-wget https://github.com/graalvm/graalvm-ce-builds/releases/download/v23.0.1/graalvm-ce-java17-linux-amd64-23.0.1.tar.gz
+wget https://github.com/graalvm/graalvm-ce-builds/releases/download/v23.0.1/graalvm-community-openjdk-17.0.9+9.1.tar.gz
 
-// 解壓縮並設定環境變數：解壓縮下載的檔案並設定JAVA_HOME 和 PATH
-tar -xzf graalvm-ce-java17-linux-amd64-23.0.1.tar.gz
-export GRAALVM_HOME=$PWD/graalvm-ce-java17-23.0.1
-export PATH=$GRAALVM_HOME/bin:$PATH
-export JAVA_HOME=$GRAALVM_HOME
+// 解壓縮
+tar -xzf graalvm-community-openjdk-17.0.9+9.1.tar.gz
 
+//編輯環境變數
+vim ~/.bashrc
+//加入以下
+export JAVA_HOME=/opt/graalvm-community-openjdk-17.0.9+9.1
+export PATH=$JAVA_HOME/bin:$PATH
+//刷新
+source ~/.bashrc
 //驗證安裝：檢查GraalVM是否安裝成功
 java -version
 ```
@@ -98,17 +102,55 @@ camel.main.routes-include-pattern=file:/mnt/*.yaml
 ```
 
 ## 運行
-執行以下指令
 ```
-./mvnw package -Pnative -DskipTests
+./mvnw spring-boot:run
 ```
 
-## 打包成各種docker image
-### jar
+## 打包成jar
 ```
-./mvnw clean package dockerfile:build -DskipTests
+./mvnw clean package
 ```
-### native
+## 打包成native image
+
 ```
-./mvnw spring-boot:build-image -Pnative -DskipTests
+ // 產生jar
+  ./mvnw clean package -Pjar-only
+
+ // 時動態擷取呼叫、執行代理、資源載入等執行時間行為
+ ./mvnw clean package -Pgenerate-native-config
+
+ <!-- 將產出的/src/main/resources/META-INF/native-image/reflect-config.json內的
+ {
+  "name": "org.apache.camel.component.platform.http.springboot.SpringBootPlatformHttpConsumer",
+  "queryAllDeclaredMethods":true
+ }
+ 更正為以下
+ {
+  "name": "org.apache.camel.component.platform.http.springboot.SpringBootPlatformHttpConsumer",
+  "queryAllDeclaredMethods":true,
+  "methods": [
+      {
+          "name": "service",
+          "parameterTypes": [
+              "jakarta.servlet.http.HttpServletRequest",
+              "jakarta.servlet.http.HttpServletResponse"
+          ]
+      }
+  ]
+} -->
+
+
+ // 打包成native
+ ./mvnw clean package -Pnative
+
+```
+
+## 打包成docker image
+```
+  // 產出 run native的 docker image (需先執行`打包成native image`)
+  docker build -f Dockerfile.danative -t tomdeltawork/userdata-project-springboot-camel:danative.v1.0.0 .
+
+  // 產出 run jar的 docker image 
+  docker build -f Dockerfile.darunjar -t tomdeltawork/userdata-project-springboot-camel:darunjar.v1.0.0 .
+
 ```
